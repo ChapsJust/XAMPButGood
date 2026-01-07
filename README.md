@@ -36,7 +36,7 @@
 | **Redis Commander** | 8082 | Redis web UI         |
 | **MailHog**         | 8025 | Email testing        |
 
----
+## **Exemple courriel MailHog** : `Send-MailMessage -From "test@test.com" -To "user@example.com" -Subject "Test Email" -Body "Hello from MailHog!" -SmtpServer "localhost" -Port 1025`
 
 ## 🚀 Quick Start
 
@@ -48,21 +48,17 @@
 ### Installation
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/YOUR_USERNAME/xampp-docker.git
+git clone
 cd xampp-docker
 
-# 2. Copy config file
 cp .env.example .env
 
-# 3. Start databases
 docker compose up -d
 
-# 4. Check status
 docker compose ps
 ```
 
-✅ Done! Your databases are ready.
+Done !
 
 ---
 
@@ -79,16 +75,25 @@ docker compose --profile admin up -d
 
 # Everything (databases + admin + MailHog)
 docker compose --profile full up -d
+
+# Erase all container + volumes + images (Fresh Restart)
+docker compose down -v --rmi all
 ```
 
 ### Stop Services
 
 ```bash
-# Stop and remove containers (keeps data)
-docker compose down
-
 # Stop without removing
 docker compose stop
+
+# Stop and remove containers
+docker compose down
+
+# Erase all container + volumes
+docker compose down -v
+
+# Erase all container + volumes + images (Fresh Restart)
+docker compose down -v --rmi all
 ```
 
 ### Start Only What You Need
@@ -118,32 +123,7 @@ docker compose logs -f postgres
 
 ## ⚙️ Configuration
 
-Edit the `.env` file to customize:
-
-```env
-# PostgreSQL
-POSTGRES_USER=devuser
-POSTGRES_PASSWORD=devpass123
-POSTGRES_DB=devdb
-POSTGRES_PORT=5432
-
-# MySQL
-MYSQL_ROOT_PASSWORD=rootpass123
-MYSQL_DATABASE=devdb
-MYSQL_USER=devuser
-MYSQL_PASSWORD=devpass123
-MYSQL_PORT=3306
-
-# MongoDB
-MONGO_ROOT_USERNAME=admin
-MONGO_ROOT_PASSWORD=mongopass123
-MONGO_DB=devdb
-MONGO_PORT=27017
-
-# Redis
-REDIS_PASSWORD=redispass123
-REDIS_PORT=6379
-```
+Edit the `.env` file to customize
 
 ### Port Conflict?
 
@@ -233,20 +213,20 @@ docker exec -it dev-postgres psql -U devuser -c "CREATE DATABASE myproject;"
 docker exec -it dev-mysql mysql -u root -prootpass123 -e "CREATE DATABASE myproject;"
 ```
 
-### Reset Everything (⚠️ Deletes All Data)
+### Reset Everything (Deletes All Data)
 
 ```bash
-docker compose down -v
+docker compose down -v --rmi all
 docker compose up -d
 ```
 
-### Clean Up Docker
+### Clean Up Docker (**_ALL DOCKER_**)
 
 ```bash
 # Remove stopped containers and unused images
 docker system prune -a
 
-# Nuclear option - removes EVERYTHING
+# Nuclear option - removes **EVERYTHING**
 docker system prune -a --volumes
 ```
 
@@ -289,13 +269,6 @@ docker compose ps
 
 Make sure Docker Desktop has access to your drive:  
 Settings → Resources → File Sharing
-
-### Full Reset
-
-```bash
-docker compose down -v --remove-orphans
-docker compose up -d
-```
 
 ---
 
