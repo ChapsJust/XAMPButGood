@@ -1,7 +1,7 @@
 # 🐳 XAMPP-Docker
 
-> A modern Docker-based replacement for XAMPP  
-> Un remplacement moderne de XAMPP basé sur Docker
+> A modern Docker-based replacement for XAMPP/DevilBox simpler  
+> Un remplacement moderne de XAMPP/DevilBox basé sur Docker
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
