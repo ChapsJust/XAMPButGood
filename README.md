@@ -1,226 +1,202 @@
 # 🐳 XAMPP-Docker
 
-> Un remplacement moderne de XAMPP basé sur Docker  
-> A modern Docker-based XAMPP replacement
+> A modern Docker-based replacement for XAMPP  
+> Un remplacement moderne de XAMPP basé sur Docker
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-## 📋 Table des matières
+## 🎯 Why This Project?
 
-- [Pourquoi ce projet?](#-pourquoi-ce-projet)
-- [Stack technique](#-stack-technique)
-- [Installation rapide](#-installation-rapide)
-- [Utilisation](#-utilisation)
-- [Configuration](#-configuration)
-- [Connexion aux bases de données](#-connexion-aux-bases-de-données)
-- [Commandes utiles](#-commandes-utiles)
-- [Contribuer](#-contribuer)
-- [Roadmap](#-roadmap)
+| XAMPP               | XAMPP-Docker                      |
+| ------------------- | --------------------------------- |
+| Heavy installation  | `docker compose up -d`            |
+| One DB version only | Any version you want              |
+| Hard to share       | Git clone = same setup everywhere |
+| Port conflicts      | Configurable ports via `.env`     |
+| Mixed data          | Isolated volumes per service      |
 
 ---
 
-## 🎯 Pourquoi ce projet?
+## 🛠 Stack
 
-**XAMPP c'est bien, mais Docker c'est mieux:**
+| Service        | Port  | Image                | Memory Limit |
+| -------------- | ----- | -------------------- | ------------ |
+| **PostgreSQL** | 5432  | `postgres:16-alpine` | 512 MB       |
+| **MySQL**      | 3306  | `mysql:8.4`          | 512 MB       |
+| **MongoDB**    | 27017 | `mongo:7.0`          | 512 MB       |
+| **Redis**      | 6379  | `redis:7-alpine`     | 256 MB       |
 
-| XAMPP                    | XAMPP-Docker                     |
-| ------------------------ | -------------------------------- |
-| Installation lourde      | `docker compose up -d`           |
-| Une seule version par DB | Toutes les versions disponibles  |
-| Difficile à partager     | Un repo Git = même setup partout |
-| Conflits de ports        | Ports configurables via `.env`   |
-| Données mélangées        | Volumes isolés par service       |
+### Optional Admin Interfaces
 
----
-
-## 🛠 Stack technique
-
-| Service        | Port  | Image                  | Description                  |
-| -------------- | ----- | ---------------------- | ---------------------------- |
-| **PostgreSQL** | 5432  | `postgres:18.1-alpine` | Base relationnelle moderne   |
-| **MySQL**      | 3306  | `mysql:9.3`            | Base relationnelle classique |
-| **MongoDB**    | 27017 | `mongo:8.2`            | Base NoSQL documents         |
-| **Redis**      | 6379  | `redis:8.4-alpine`     | Cache & sessions             |
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Docker Network (dev-network)                  │
-│                                                                  │
-│  ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────┐   │
-│  │ PostgreSQL │ │   MySQL    │ │  MongoDB   │ │   Redis    │   │
-│  │   :5432    │ │   :3306    │ │  :27017    │ │   :6379    │   │
-│  └────────────┘ └────────────┘ └────────────┘ └────────────┘   │
-│                                                                  │
-└──────────┬─────────────┬─────────────┬─────────────┬────────────┘
-           │             │             │             │
-           ▼             ▼             ▼             ▼
-      localhost     localhost     localhost     localhost
-        :5432         :3306         :27017        :6379
-           │             │             │             │
-           └─────────────┴──────┬──────┴─────────────┘
-                                │
-                    ┌───────────┴───────────┐
-                    │    Votre machine      │
-                    │  DBeaver / VS Code    │
-                    │  .NET / Node / PHP    │
-                    └───────────────────────┘
-```
+| Service             | Port | Description          |
+| ------------------- | ---- | -------------------- |
+| **Adminer**         | 8080 | SQL databases web UI |
+| **Mongo Express**   | 8081 | MongoDB web UI       |
+| **Redis Commander** | 8082 | Redis web UI         |
+| **MailHog**         | 8025 | Email testing        |
 
 ---
 
-## 🚀 Installation rapide
+## 🚀 Quick Start
 
-### Prérequis
+### Prerequisites
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) ou Docker Engine (Linux)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) or Docker Engine (Linux)
 - Git
 
 ### Installation
 
 ```bash
-# 1. Cloner le repo
-git clone https://github.com/VOTRE_USERNAME/xampp-docker.git
+# 1. Clone the repo
+git clone https://github.com/YOUR_USERNAME/xampp-docker.git
 cd xampp-docker
 
-# 2. Copier la configuration
+# 2. Copy config file
 cp .env.example .env
 
-# 3. Lancer les services
+# 3. Start databases
 docker compose up -d
 
-# 4. Vérifier que tout tourne
+# 4. Check status
 docker compose ps
 ```
 
-✅ C'est tout! Vos bases de données sont prêtes.
+✅ Done! Your databases are ready.
 
 ---
 
-## 📖 Utilisation
+## 📖 Usage
 
-### Démarrer/Arrêter
+### Start Services
 
 ```bash
-# Tout démarrer
+# Databases only (PostgreSQL, MySQL, MongoDB, Redis)
 docker compose up -d
 
-# Tout arrêter
+# With admin web interfaces
+docker compose --profile admin up -d
+
+# Everything (databases + admin + MailHog)
+docker compose --profile full up -d
+```
+
+### Stop Services
+
+```bash
+# Stop and remove containers (keeps data)
 docker compose down
 
-# Arrêter SANS supprimer les données
+# Stop without removing
 docker compose stop
 ```
 
-### Démarrer seulement ce dont vous avez besoin
+### Start Only What You Need
 
 ```bash
-# Seulement PostgreSQL
+# Only PostgreSQL
 docker compose up -d postgres
 
 # PostgreSQL + Redis
 docker compose up -d postgres redis
 
-# Arrêter un service spécifique
-docker compose stop mongodb
+# Stop one service
+docker compose stop mysql
 ```
 
-### Voir les logs
+### View Logs
 
 ```bash
-# Tous les services
+# All services
 docker compose logs -f
 
-# Un service spécifique
-docker compose logs -f mysql
+# One service
+docker compose logs -f postgres
 ```
 
 ---
 
 ## ⚙️ Configuration
 
-### Variables d'environnement (.env)
+Edit the `.env` file to customize:
 
 ```env
 # PostgreSQL
 POSTGRES_USER=devuser
-POSTGRES_PASSWORD=devpass123!
+POSTGRES_PASSWORD=devpass123
 POSTGRES_DB=devdb
 POSTGRES_PORT=5432
 
 # MySQL
-MYSQL_ROOT_PASSWORD=rootpass123!
+MYSQL_ROOT_PASSWORD=rootpass123
 MYSQL_DATABASE=devdb
 MYSQL_USER=devuser
-MYSQL_PASSWORD=devpass123!
+MYSQL_PASSWORD=devpass123
 MYSQL_PORT=3306
 
 # MongoDB
 MONGO_ROOT_USERNAME=admin
-MONGO_ROOT_PASSWORD=mongopass123!
+MONGO_ROOT_PASSWORD=mongopass123
 MONGO_DB=devdb
 MONGO_PORT=27017
 
 # Redis
-REDIS_PASSWORD=redispass123!
+REDIS_PASSWORD=redispass123
 REDIS_PORT=6379
 ```
 
-### Changer les ports (en cas de conflit)
+### Port Conflict?
 
-Si le port 5432 est déjà utilisé:
+Change the port in `.env`:
 
 ```env
 POSTGRES_PORT=5433
 ```
 
-Puis relancez: `docker compose up -d postgres`
+Then restart: `docker compose up -d postgres`
 
 ---
 
-## 🔌 Connexion aux bases de données
+## 🔌 Connect to Databases
 
-### DBeaver / DataGrip / TablePlus
+### Connection Info
 
-| Service    | Host        | Port    | User      | Password        | Database |
-| ---------- | ----------- | ------- | --------- | --------------- | -------- |
-| PostgreSQL | `localhost` | `5432`  | `devuser` | `devpass123!`   | `devdb`  |
-| MySQL      | `localhost` | `3306`  | `devuser` | `devpass123!`   | `devdb`  |
-| MongoDB    | `localhost` | `27017` | `admin`   | `mongopass123!` | `admin`  |
-| Redis      | `localhost` | `6379`  | -         | `redispass123!` | -        |
+| Service    | Host        | Port    | User      | Password       | Database |
+| ---------- | ----------- | ------- | --------- | -------------- | -------- |
+| PostgreSQL | `localhost` | `5432`  | `devuser` | `devpass123`   | `devdb`  |
+| MySQL      | `localhost` | `3306`  | `devuser` | `devpass123`   | `devdb`  |
+| MongoDB    | `localhost` | `27017` | `admin`   | `mongopass123` | `admin`  |
+| Redis      | `localhost` | `6379`  | -         | `redispass123` | -        |
 
 ### Connection Strings
 
 **PostgreSQL:**
 
 ```
-Host=localhost;Port=5432;Database=devdb;Username=devuser;Password=devpass123!
+Host=localhost;Port=5432;Database=devdb;Username=devuser;Password=devpass123
 ```
 
 **MySQL:**
 
 ```
-Server=localhost;Port=3306;Database=devdb;User=devuser;Password=devpass123!
+Server=localhost;Port=3306;Database=devdb;User=devuser;Password=devpass123
 ```
 
 **MongoDB:**
 
 ```
-mongodb://admin:mongopass123!@localhost:27017/devdb?authSource=admin
+mongodb://admin:mongopass123@localhost:27017/devdb?authSource=admin
 ```
 
 **Redis:**
 
 ```
-localhost:6379,password=redispass123!
+localhost:6379,password=redispass123
 ```
 
-### Depuis un autre container Docker
+### From Another Docker Container
 
-Utilisez les noms de service au lieu de `localhost`:
+Use service names instead of `localhost`:
 
 ```
 Host=postgres;Port=5432;Database=devdb;...
@@ -229,9 +205,9 @@ Host=mysql;Port=3306;Database=devdb;...
 
 ---
 
-## 🛠 Commandes utiles
+## 🛠 Useful Commands
 
-### Accès direct aux bases
+### Access Database CLI
 
 ```bash
 # PostgreSQL
@@ -241,113 +217,98 @@ docker exec -it dev-postgres psql -U devuser -d devdb
 docker exec -it dev-mysql mysql -u devuser -p devdb
 
 # MongoDB
-docker exec -it dev-mongodb mongosh -u admin -p mongopass123!
+docker exec -it dev-mongodb mongosh -u admin -p mongopass123
 
 # Redis
-docker exec -it dev-redis redis-cli -a redispass123!
+docker exec -it dev-redis redis-cli -a redispass123
 ```
 
-### Créer une nouvelle base de données
+### Create a New Database
 
 ```bash
 # PostgreSQL
-docker exec -it dev-postgres psql -U devuser -c "CREATE DATABASE nouveau_projet;"
+docker exec -it dev-postgres psql -U devuser -c "CREATE DATABASE myproject;"
 
 # MySQL
-docker exec -it dev-mysql mysql -u root -prootpass123! -e "CREATE DATABASE nouveau_projet;"
+docker exec -it dev-mysql mysql -u root -prootpass123 -e "CREATE DATABASE myproject;"
 ```
 
-### Reset complet (ATTENTION: supprime toutes les données)
+### Reset Everything (⚠️ Deletes All Data)
 
 ```bash
 docker compose down -v
 docker compose up -d
 ```
 
-### Nettoyage Docker
+### Clean Up Docker
 
 ```bash
-# Supprimer les containers arrêtés
-docker container prune
+# Remove stopped containers and unused images
+docker system prune -a
 
-# Supprimer les images non utilisées
-docker image prune
-
-# Nettoyage complet (attention!)
+# Nuclear option - removes EVERYTHING
 docker system prune -a --volumes
 ```
 
 ---
 
-## 🤝 Contribuer
+## 🌐 Web Interfaces
 
-Les contributions sont les bienvenues! Ce projet est conçu pour apprendre Docker ensemble.
+Start with `docker compose --profile admin up -d` then open:
 
-### Comment contribuer
+| Interface       | URL                   | Use For                       |
+| --------------- | --------------------- | ----------------------------- |
+| Adminer         | http://localhost:8080 | PostgreSQL & MySQL            |
+| Mongo Express   | http://localhost:8081 | MongoDB                       |
+| Redis Commander | http://localhost:8082 | Redis                         |
+| MailHog         | http://localhost:8025 | Email testing (profile: full) |
 
-1. **Fork** le repo
-2. **Clone** votre fork: `git clone <>`
-3. **Créez une branche**: `git checkout -b feature/ma-feature`
-4. **Committez**: `git commit -m "Add: ma nouvelle feature"`
-5. **Push**: `git push origin feature/ma-feature`
-6. **Ouvrez une Pull Request**
-
-### Idées de contributions
-
-- 🐛 Corriger des bugs
-- 📝 Améliorer la documentation
-- 🌍 Traduire en d'autres langues
-- ➕ Ajouter de nouveaux services (voir Roadmap)
-- 🧪 Ajouter des scripts utiles
-- 🎨 Améliorer les scripts existants
-
-### Guidelines
-
-- Gardez les choses simples (KISS)
-- Documentez vos changements
-- Testez sur Windows ET Linux si possible
+---
 
 ## ❓ Troubleshooting
 
-### Port déjà utilisé
+### Port Already in Use
 
 ```
 Error: bind: address already in use
 ```
 
-**Solution:** Changez le port dans `.env`:
+Change the port in `.env` and restart.
 
-```env
-POSTGRES_PORT=5433
-```
-
-### Container ne démarre pas
+### Container Won't Start
 
 ```bash
-# Voir les logs
+# Check logs
 docker compose logs postgres
 
-# Vérifier le statut
+# Check status
 docker compose ps
 ```
 
-### Réinitialiser complètement
+### Windows: File Mounting Issues
+
+Make sure Docker Desktop has access to your drive:  
+Settings → Resources → File Sharing
+
+### Full Reset
 
 ```bash
 docker compose down -v --remove-orphans
 docker compose up -d
 ```
 
-### Windows: problème de montage de fichiers
+---
 
-Si vous avez des erreurs de montage, vérifiez que Docker Desktop a accès à votre disque dans Settings > Resources > File Sharing.
+## 🤝 Contributing
+
+Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
 
 ## 📝 License
 
-MIT - Utilisez librement pour vos projets personnels et professionnels.
+MIT - Use freely for personal and commercial projects.
 
 ---
 
-**Maintenu par la communauté** | [Issues](../../issues) | [Discussions](../../discussions)
+**Made with ❤️ by the community** | [Issues](../../issues) | [Discussions](../../discussions)
