@@ -112,12 +112,12 @@ docker compose ps
 
 ## 📦 Services disponibles / Available Services
 
-| Service    | Port  | Image                           | Description                    |
-|------------|-------|--------------------------------|--------------------------------|
-| PostgreSQL | 5432  | `postgres:16.4-alpine`         | Base relationnelle principale  |
-| MongoDB    | 27017 | `mongo:7.0`                    | Base NoSQL documents           |
-| Redis      | 6379  | `redis:7.4-alpine`             | Cache & sessions               |
-| SQL Server | 1433  | `mssql/server:2022-latest`     | Optionnel - compatibilité MS   |
+| Service    | Port  | Image                      | Description                   |
+| ---------- | ----- | -------------------------- | ----------------------------- |
+| PostgreSQL | 5432  | `postgres:16.4-alpine`     | Base relationnelle principale |
+| MongoDB    | 27017 | `mongo:7.0`                | Base NoSQL documents          |
+| Redis      | 6379  | `redis:7.4-alpine`         | Cache & sessions              |
+| SQL Server | 1433  | `mssql/server:2022-latest` | Optionnel - compatibilité MS  |
 
 ---
 
@@ -152,11 +152,11 @@ MSSQL_PORT=1433
 Les limites sont configurées dans `docker-compose.yml`:
 
 | Service    | Memory Limit | Memory Reserved |
-|------------|-------------|-----------------|
-| PostgreSQL | 512 MB      | 256 MB          |
-| MongoDB    | 512 MB      | 256 MB          |
-| Redis      | 256 MB      | 128 MB          |
-| SQL Server | 2 GB        | 1 GB            |
+| ---------- | ------------ | --------------- |
+| PostgreSQL | 512 MB       | 256 MB          |
+| MongoDB    | 512 MB       | 256 MB          |
+| Redis      | 256 MB       | 128 MB          |
+| SQL Server | 2 GB         | 1 GB            |
 
 ---
 
@@ -164,55 +164,58 @@ Les limites sont configurées dans `docker-compose.yml`:
 
 ### PostgreSQL
 
-| Paramètre      | Valeur                     |
-|----------------|----------------------------|
-| Host           | `localhost`                |
-| Port           | `5432`                     |
-| Database       | `devdb` (ou votre valeur)  |
-| Username       | `devuser` (ou votre valeur)|
-| Password       | (votre mot de passe .env)  |
+| Paramètre | Valeur                      |
+| --------- | --------------------------- |
+| Host      | `localhost`                 |
+| Port      | `5432`                      |
+| Database  | `devdb` (ou votre valeur)   |
+| Username  | `devuser` (ou votre valeur) |
+| Password  | (votre mot de passe .env)   |
 
 **Connection String:**
+
 ```
 jdbc:postgresql://localhost:5432/devdb
 ```
 
 ### MongoDB
 
-| Paramètre      | Valeur                     |
-|----------------|----------------------------|
-| Host           | `localhost`                |
-| Port           | `27017`                    |
-| Database       | `devdb`                    |
-| Authentication | `admin` (authSource)       |
-| Username       | `admin`                    |
-| Password       | (votre mot de passe .env)  |
+| Paramètre      | Valeur                    |
+| -------------- | ------------------------- |
+| Host           | `localhost`               |
+| Port           | `27017`                   |
+| Database       | `devdb`                   |
+| Authentication | `admin` (authSource)      |
+| Username       | `admin`                   |
+| Password       | (votre mot de passe .env) |
 
 **Connection String:**
+
 ```
 mongodb://admin:mongopass123!@localhost:27017/devdb?authSource=admin
 ```
 
 ### Redis
 
-| Paramètre      | Valeur                     |
-|----------------|----------------------------|
-| Host           | `localhost`                |
-| Port           | `6379`                     |
-| Password       | (votre mot de passe .env)  |
+| Paramètre | Valeur                    |
+| --------- | ------------------------- |
+| Host      | `localhost`               |
+| Port      | `6379`                    |
+| Password  | (votre mot de passe .env) |
 
 > 💡 Pour Redis, utilisez Redis Insight ou Another Redis Desktop Manager
 
 ### SQL Server
 
-| Paramètre      | Valeur                     |
-|----------------|----------------------------|
-| Host           | `localhost`                |
-| Port           | `1433`                     |
-| Username       | `sa`                       |
-| Password       | (votre MSSQL_SA_PASSWORD)  |
+| Paramètre | Valeur                    |
+| --------- | ------------------------- |
+| Host      | `localhost`               |
+| Port      | `1433`                    |
+| Username  | `sa`                      |
+| Password  | (votre MSSQL_SA_PASSWORD) |
 
 **Connection String:**
+
 ```
 jdbc:sqlserver://localhost:1433;encrypt=true;trustServerCertificate=true
 ```
@@ -437,7 +440,8 @@ lsof -i :5432
 
 **Erreur:** `sqlservr: This program requires a machine with at least 2000 megabytes of memory.`
 
-**Solution:** 
+**Solution:**
+
 1. Allouer plus de RAM à Docker Desktop (Settings > Resources)
 2. Minimum 2 GB pour SQL Server
 
@@ -501,6 +505,7 @@ docker-dev-env/
 ⚠️ **Cette configuration est pour le DÉVELOPPEMENT uniquement!**
 
 Pour la production, modifiez:
+
 - Utilisez des mots de passe forts et uniques
 - Ne pas exposer les ports sur 0.0.0.0
 - Activer TLS/SSL pour toutes les connexions
