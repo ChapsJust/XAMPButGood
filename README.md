@@ -20,12 +20,12 @@
 
 ## 🛠 Stack
 
-| Service        | Port  | Image                | Memory Limit |
-| -------------- | ----- | -------------------- | ------------ |
-| **PostgreSQL** | 5432  | `postgres:16-alpine` | 512 MB       |
-| **MySQL**      | 3306  | `mysql:8.4`          | 512 MB       |
-| **MongoDB**    | 27017 | `mongo:7.0`          | 512 MB       |
-| **Redis**      | 6379  | `redis:7-alpine`     | 256 MB       |
+| Service        | Port  | Image                  | Memory Limit |
+| -------------- | ----- | ---------------------- | ------------ |
+| **PostgreSQL** | 5432  | `postgres:18.1-alpine` | 256 MB       |
+| **MySQL**      | 3306  | `mysql:9.3`            | 256 MB       |
+| **MongoDB**    | 27017 | `mongo:8.2`            | 350 MB       |
+| **Redis**      | 6379  | `redis:8.4-alpine`     | 128 MB       |
 
 ### Optional Admin Interfaces
 
@@ -36,7 +36,7 @@
 | **Redis Commander** | 8082 | Redis web UI         |
 | **MailHog**         | 8025 | Email testing        |
 
-## **Exemple courriel MailHog** : `Send-MailMessage -From "test@test.com" -To "user@example.com" -Subject "Test Email" -Body "Hello from MailHog!" -SmtpServer "localhost" -Port 1025`
+---
 
 ## 🚀 Quick Start
 
@@ -44,12 +44,13 @@
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/Mac) or Docker Engine (Linux)
 - Git
+- Make (optional, see [Makefile section](#-makefile-shortcuts))
 
 ### Installation
 
 ```bash
-git clone
-cd xampp-docker
+git clone https://github.com/ChapsJust/XAMPButGood.git
+cd XAMPButGood
 
 cp .env.example .env
 
@@ -58,11 +59,60 @@ docker compose up -d
 docker compose ps
 ```
 
-Done !
+Done!
 
 ---
 
-## 📖 Usage
+## ⚡ Makefile Shortcuts
+
+This project includes a Makefile for common commands. Much faster than typing full Docker commands!
+
+### Install Make (Windows)
+
+```bash
+# Using Chocolatey
+choco install make
+
+# Using winget
+winget install GnuWin32.Make
+```
+
+Make is pre-installed on Mac and Linux.
+
+### Available Commands
+
+```bash
+make help      # Show all available commands
+```
+
+| Command              | Description                                    |
+| -------------------- | ---------------------------------------------- |
+| `make up`            | Start databases only                           |
+| `make admin`         | Start databases + admin web interfaces         |
+| `make full`          | Start everything (databases + admin + MailHog) |
+| `make down`          | Stop and remove containers                     |
+| `make stop`          | Stop without removing                          |
+| `make restart`       | Restart all services                           |
+| `make ps`            | Show container status                          |
+| `make logs`          | View all logs (follow mode)                    |
+| `make logs-postgres` | View PostgreSQL logs only                      |
+| `make health`        | Check health status of all services            |
+| `make clean`         | Remove containers + volumes                    |
+| `make reset`         | Full reset (containers + volumes + images)     |
+| `make validate`      | Validate docker-compose.yml syntax             |
+
+### Database CLI Access
+
+```bash
+make shell-postgres   # Open psql
+make shell-mysql      # Open MySQL CLI
+make shell-mongo      # Open mongosh
+make shell-redis      # Open redis-cli
+```
+
+---
+
+## 📖 Usage (Without Make)
 
 ### Start Services
 
@@ -75,9 +125,6 @@ docker compose --profile admin up -d
 
 # Everything (databases + admin + MailHog)
 docker compose --profile full up -d
-
-# Erase all container + volumes + images (Fresh Restart)
-docker compose down -v --rmi all
 ```
 
 ### Stop Services
@@ -87,13 +134,13 @@ docker compose down -v --rmi all
 docker compose stop
 
 # Stop and remove containers
-docker compose down
+docker compose --profile full down
 
-# Erase all container + volumes
-docker compose down -v
+# Erase all containers + volumes
+docker compose --profile full down -v
 
-# Erase all container + volumes + images (Fresh Restart)
-docker compose down -v --rmi all
+# Erase all containers + volumes + images (Fresh Restart)
+docker compose --profile full down -v --rmi all
 ```
 
 ### Start Only What You Need
@@ -123,7 +170,7 @@ docker compose logs -f postgres
 
 ## ⚙️ Configuration
 
-Edit the `.env` file to customize
+Edit the `.env` file to customize ports, passwords, and database names.
 
 ### Port Conflict?
 
@@ -133,7 +180,7 @@ Change the port in `.env`:
 POSTGRES_PORT=5433
 ```
 
-Then restart: `docker compose up -d postgres`
+Then restart: `docker compose up -d postgres` or `make up`
 
 ---
 
@@ -203,6 +250,8 @@ docker exec -it dev-mongodb mongosh -u admin -p mongopass123
 docker exec -it dev-redis redis-cli -a redispass123
 ```
 
+Or with Make: `make shell-postgres`, `make shell-mysql`, etc.
+
 ### Create a New Database
 
 ```bash
@@ -216,25 +265,17 @@ docker exec -it dev-mysql mysql -u root -prootpass123 -e "CREATE DATABASE myproj
 ### Reset Everything (Deletes All Data)
 
 ```bash
-docker compose down -v --rmi all
+make reset
+# or
+docker compose --profile full down -v --rmi all
 docker compose up -d
-```
-
-### Clean Up Docker (**_ALL DOCKER_**)
-
-```bash
-# Remove stopped containers and unused images
-docker system prune -a
-
-# Nuclear option - removes **EVERYTHING**
-docker system prune -a --volumes
 ```
 
 ---
 
 ## 🌐 Web Interfaces
 
-Start with `docker compose --profile admin up -d` then open:
+Start with `make admin` or `docker compose --profile admin up -d` then open:
 
 | Interface       | URL                   | Use For                       |
 | --------------- | --------------------- | ----------------------------- |
@@ -242,6 +283,12 @@ Start with `docker compose --profile admin up -d` then open:
 | Mongo Express   | http://localhost:8081 | MongoDB                       |
 | Redis Commander | http://localhost:8082 | Redis                         |
 | MailHog         | http://localhost:8025 | Email testing (profile: full) |
+
+### MailHog Email Example (PowerShell)
+
+```powershell
+Send-MailMessage -From "test@test.com" -To "user@example.com" -Subject "Test Email" -Body "Hello from MailHog!" -SmtpServer "localhost" -Port 1025
+```
 
 ---
 
@@ -260,9 +307,22 @@ Change the port in `.env` and restart.
 ```bash
 # Check logs
 docker compose logs postgres
+# or
+make logs-postgres
 
 # Check status
 docker compose ps
+# or
+make ps
+```
+
+### Network Issues After Reset
+
+If you see `network not found` errors:
+
+```bash
+docker network prune -f
+make full
 ```
 
 ### Windows: File Mounting Issues
