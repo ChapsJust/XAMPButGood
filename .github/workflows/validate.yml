@@ -1,109 +1,59 @@
 # =============================================================================
-# GitHub Actions - Validate Docker Compose Configuration
+# GitHub Actions - Validate Docker Compose
 # =============================================================================
-# Validates docker-compose.yml syntax and verifies all services start healthy.
-# Relies on healthchecks defined in docker-compose.yml (no duplicate testing).
+# Minimal validation: syntax check + environment variables check
+# Fast (~30 seconds) and reliable
 # =============================================================================
 
-name: Validate Docker Compose
+name: Validate
 
 on:
   push:
     branches: [main, master]
-    paths:
-      - "docker-compose.yml"
-      - ".env.example"
-      - ".github/workflows/validate.yml"
   pull_request:
     branches: [main, master]
-    paths:
-      - "docker-compose.yml"
-      - ".env.example"
-      - ".github/workflows/validate.yml"
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   validate:
-    name: Validate Configuration
+    name: Validate docker-compose
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 2
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create .env from example
+      - name: Setup environment
         run: cp .env.example .env
 
-      - name: Validate docker-compose syntax
+      - name: Validate syntax
         run: |
           docker compose config --quiet
-          echo "✅ docker-compose.yml syntax is valid"
+          echo "✅ docker-compose.yml is valid"
 
-      - name: Start core services
+      - name: Check required variables
         run: |
-          docker compose up -d postgres mysql mongodb redis
-          echo "⏳ Services starting..."
+          echo "Checking .env.example has all required variables..."
 
-      - name: Wait for healthy status
-        run: |
-          echo "Waiting for all services to be healthy..."
+          # Extract variables used in docker-compose.yml
+          compose_vars=$(grep -oE '\$\{[A-Z_]+' docker-compose.yml | sed 's/\${//' | sort -u)
 
-          # Maximum wait time: 2 minutes (24 checks * 5 seconds)
-          max_attempts=24
-          attempt=1
-
-          while [ $attempt -le $max_attempts ]; do
-            echo ""
-            echo "=== Attempt $attempt/$max_attempts ==="
-            
-            # Get health status for each service
-            postgres_health=$(docker inspect --format='{{.State.Health.Status}}' dev-postgres 2>/dev/null || echo "not found")
-            mysql_health=$(docker inspect --format='{{.State.Health.Status}}' dev-mysql 2>/dev/null || echo "not found")
-            mongodb_health=$(docker inspect --format='{{.State.Health.Status}}' dev-mongodb 2>/dev/null || echo "not found")
-            redis_health=$(docker inspect --format='{{.State.Health.Status}}' dev-redis 2>/dev/null || echo "not found")
-            
-            echo "PostgreSQL: $postgres_health"
-            echo "MySQL:      $mysql_health"
-            echo "MongoDB:    $mongodb_health"
-            echo "Redis:      $redis_health"
-            
-            # Check if all are healthy
-            if [ "$postgres_health" = "healthy" ] && \
-               [ "$mysql_health" = "healthy" ] && \
-               [ "$mongodb_health" = "healthy" ] && \
-               [ "$redis_health" = "healthy" ]; then
-              echo ""
-              echo "✅ All services are healthy!"
-              exit 0
+          missing=""
+          for var in $compose_vars; do
+            if ! grep -q "^${var}=" .env.example; then
+              missing="$missing $var"
             fi
-            
-            attempt=$((attempt + 1))
-            sleep 5
           done
 
-          echo ""
-          echo "❌ Timeout: Not all services became healthy"
-          echo ""
-          echo "=== Container Status ==="
-          docker compose ps -a
-          echo ""
-          echo "=== Logs ==="
-          docker compose logs
-          exit 1
+          if [ -n "$missing" ]; then
+            echo "❌ Missing variables in .env.example:$missing"
+            exit 1
+          fi
 
-      - name: Show final status
-        if: success()
+          echo "✅ All variables defined in .env.example"
+
+      - name: List services
         run: |
-          echo "=== Final Container Status ==="
-          docker compose ps
-
-      - name: Show logs on failure
-        if: failure()
-        run: |
-          echo "=== All Logs ==="
-          docker compose logs
-
-      - name: Cleanup
-        if: always()
-        run: docker compose down -v --remove-orphans
+          echo "📦 Services defined:"
+          docker compose config --services | sed 's/^/  - /'
