@@ -1,8 +1,8 @@
 # =============================================================================
 # GitHub Actions - Validate Docker Compose Configuration
 # =============================================================================
-# Runs on every push and pull request to ensure docker-compose.yml is valid
-# and all services can start successfully.
+# Validates docker-compose.yml syntax and verifies all services start healthy.
+# Relies on healthchecks defined in docker-compose.yml (no duplicate testing).
 # =============================================================================
 
 name: Validate Docker Compose
@@ -20,11 +20,13 @@ on:
       - "docker-compose.yml"
       - ".env.example"
       - ".github/workflows/validate.yml"
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
   validate:
     name: Validate Configuration
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -33,102 +35,75 @@ jobs:
       - name: Create .env from example
         run: cp .env.example .env
 
-      - name: Load environment variables
-        run: |
-          set -a
-          source .env
-          set +a
-          echo "POSTGRES_USER=$POSTGRES_USER" >> $GITHUB_ENV
-          echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
-          echo "POSTGRES_DB=$POSTGRES_DB" >> $GITHUB_ENV
-          echo "MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD" >> $GITHUB_ENV
-          echo "MYSQL_USER=$MYSQL_USER" >> $GITHUB_ENV
-          echo "MYSQL_PASSWORD=$MYSQL_PASSWORD" >> $GITHUB_ENV
-          echo "MYSQL_DATABASE=$MYSQL_DATABASE" >> $GITHUB_ENV
-          echo "MONGO_ROOT_USERNAME=$MONGO_ROOT_USERNAME" >> $GITHUB_ENV
-          echo "MONGO_ROOT_PASSWORD=$MONGO_ROOT_PASSWORD" >> $GITHUB_ENV
-          echo "REDIS_PASSWORD=$REDIS_PASSWORD" >> $GITHUB_ENV
-
       - name: Validate docker-compose syntax
-        run: docker compose config --quiet
+        run: |
+          docker compose config --quiet
+          echo "✅ docker-compose.yml syntax is valid"
 
       - name: Start core services
-        run: docker compose up -d postgres mysql mongodb redis
-
-      - name: Wait for services to be healthy
         run: |
-          echo "⏳ Waiting for services to become healthy..."
+          docker compose up -d postgres mysql mongodb redis
+          echo "⏳ Services starting..."
 
-          for i in {1..24}; do
-            echo "Check $i/24..."
+      - name: Wait for healthy status
+        run: |
+          echo "Waiting for all services to be healthy..."
+
+          # Maximum wait time: 2 minutes (24 checks * 5 seconds)
+          max_attempts=24
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo ""
+            echo "=== Attempt $attempt/$max_attempts ==="
             
-            all_healthy=true
-            for service in postgres mysql mongodb redis; do
-              status=$(docker compose ps $service --format "{{.Health}}" 2>/dev/null || echo "unknown")
-              if [ "$status" != "healthy" ]; then
-                all_healthy=false
-                echo "  $service: $status"
-              else
-                echo "  $service: ✅ healthy"
-              fi
-            done
+            # Get health status for each service
+            postgres_health=$(docker inspect --format='{{.State.Health.Status}}' dev-postgres 2>/dev/null || echo "not found")
+            mysql_health=$(docker inspect --format='{{.State.Health.Status}}' dev-mysql 2>/dev/null || echo "not found")
+            mongodb_health=$(docker inspect --format='{{.State.Health.Status}}' dev-mongodb 2>/dev/null || echo "not found")
+            redis_health=$(docker inspect --format='{{.State.Health.Status}}' dev-redis 2>/dev/null || echo "not found")
             
-            if [ "$all_healthy" = true ]; then
-              echo "✅ All services healthy!"
-              break
+            echo "PostgreSQL: $postgres_health"
+            echo "MySQL:      $mysql_health"
+            echo "MongoDB:    $mongodb_health"
+            echo "Redis:      $redis_health"
+            
+            # Check if all are healthy
+            if [ "$postgres_health" = "healthy" ] && \
+               [ "$mysql_health" = "healthy" ] && \
+               [ "$mongodb_health" = "healthy" ] && \
+               [ "$redis_health" = "healthy" ]; then
+              echo ""
+              echo "✅ All services are healthy!"
+              exit 0
             fi
             
-            if [ $i -eq 24 ]; then
-              echo "❌ Timeout waiting for services"
-              docker compose ps
-              docker compose logs
-              exit 1
-            fi
-            
+            attempt=$((attempt + 1))
             sleep 5
           done
 
-      - name: Test PostgreSQL connection
-        run: |
-          docker exec dev-postgres pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
-          echo "✅ PostgreSQL connection OK"
+          echo ""
+          echo "❌ Timeout: Not all services became healthy"
+          echo ""
+          echo "=== Container Status ==="
+          docker compose ps -a
+          echo ""
+          echo "=== Logs ==="
+          docker compose logs
+          exit 1
 
-      - name: Test MySQL connection
+      - name: Show final status
+        if: success()
         run: |
-          # Use mysql command to run a simple query (more reliable than mysqladmin)
-          docker exec dev-mysql mysql \
-            -h 127.0.0.1 \
-            -u "$MYSQL_USER" \
-            -p"$MYSQL_PASSWORD" \
-            -e "SELECT 1;" \
-            "$MYSQL_DATABASE" > /dev/null 2>&1
-          echo "✅ MySQL connection OK"
-
-      - name: Test MongoDB connection
-        run: |
-          docker exec dev-mongodb mongosh --quiet \
-            "mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@127.0.0.1:27017/?authSource=admin" \
-            --eval "db.runCommand('ping').ok"
-          echo "✅ MongoDB connection OK"
-
-      - name: Test Redis connection
-        run: |
-          result=$(docker exec dev-redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping)
-          if [ "$result" = "PONG" ]; then
-            echo "✅ Redis connection OK"
-          else
-            echo "❌ Redis connection failed"
-            exit 1
-          fi
-
-      - name: Show running containers
-        if: always()
-        run: docker compose ps
+          echo "=== Final Container Status ==="
+          docker compose ps
 
       - name: Show logs on failure
         if: failure()
-        run: docker compose logs
+        run: |
+          echo "=== All Logs ==="
+          docker compose logs
 
       - name: Cleanup
         if: always()
-        run: docker compose down -v
+        run: docker compose down -v --remove-orphans
