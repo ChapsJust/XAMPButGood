@@ -88,10 +88,10 @@ shell-redis: ## Open Redis CLI
 # Cleanup
 # -----------------------------------------------------------------------------
 clean: ## Stop and remove containers + volumes (keeps images)
-	docker compose --profile full down -v
+	docker compose down -v
 
 reset: ## Full reset: remove containers, volumes, and images
-	docker compose --profile full down -v --rmi all
+	docker compose down -v --rmi all
 
 prune: ## Remove unused Docker resources (system-wide)
 	docker system prune -f
