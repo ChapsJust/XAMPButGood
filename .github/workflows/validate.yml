@@ -35,11 +35,9 @@ jobs:
 
       - name: Load environment variables
         run: |
-          # Export all variables from .env for use in subsequent steps
           set -a
           source .env
           set +a
-          # Save to GitHub env for other steps
           echo "POSTGRES_USER=$POSTGRES_USER" >> $GITHUB_ENV
           echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" >> $GITHUB_ENV
           echo "POSTGRES_DB=$POSTGRES_DB" >> $GITHUB_ENV
@@ -61,9 +59,8 @@ jobs:
         run: |
           echo "⏳ Waiting for services to become healthy..."
 
-          # Wait up to 90 seconds for all services
-          for i in {1..18}; do
-            echo "Check $i/18..."
+          for i in {1..24}; do
+            echo "Check $i/24..."
             
             all_healthy=true
             for service in postgres mysql mongodb redis; do
@@ -81,33 +78,48 @@ jobs:
               break
             fi
             
-            if [ $i -eq 18 ]; then
+            if [ $i -eq 24 ]; then
               echo "❌ Timeout waiting for services"
               docker compose ps
+              docker compose logs
               exit 1
             fi
             
             sleep 5
           done
 
-      - name: Test database connections
+      - name: Test PostgreSQL connection
         run: |
-          # Test PostgreSQL
           docker exec dev-postgres pg_isready -U $POSTGRES_USER -d $POSTGRES_DB
           echo "✅ PostgreSQL connection OK"
 
-          # Test MySQL (use mysqladmin with proper auth)
-          docker exec dev-mysql mysqladmin ping -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" --silent
+      - name: Test MySQL connection
+        run: |
+          # Use mysql command to run a simple query (more reliable than mysqladmin)
+          docker exec dev-mysql mysql \
+            -h 127.0.0.1 \
+            -u "$MYSQL_USER" \
+            -p"$MYSQL_PASSWORD" \
+            -e "SELECT 1;" \
+            "$MYSQL_DATABASE" > /dev/null 2>&1
           echo "✅ MySQL connection OK"
 
-          # Test MongoDB
-          docker exec dev-mongodb mongosh --quiet --eval "db.runCommand('ping').ok" \
-            "mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@localhost:27017/?authSource=admin"
+      - name: Test MongoDB connection
+        run: |
+          docker exec dev-mongodb mongosh --quiet \
+            "mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@127.0.0.1:27017/?authSource=admin" \
+            --eval "db.runCommand('ping').ok"
           echo "✅ MongoDB connection OK"
 
-          # Test Redis
-          docker exec dev-redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping
-          echo "✅ Redis connection OK"
+      - name: Test Redis connection
+        run: |
+          result=$(docker exec dev-redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning ping)
+          if [ "$result" = "PONG" ]; then
+            echo "✅ Redis connection OK"
+          else
+            echo "❌ Redis connection failed"
+            exit 1
+          fi
 
       - name: Show running containers
         if: always()
