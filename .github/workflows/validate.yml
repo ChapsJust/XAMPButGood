@@ -1,0 +1,86 @@
+# =============================================================================
+# GitHub Actions - Validate Docker Compose Configuration
+# =============================================================================
+# Runs on every push and pull request to ensure docker-compose.yml is valid
+# and all services can start successfully.
+# =============================================================================
+
+name: Validate Docker Compose
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "docker-compose.yml"
+      - ".env.example"
+      - ".github/workflows/validate.yml"
+  pull_request:
+    branches: [main, master]
+    paths:
+      - "docker-compose.yml"
+      - ".env.example"
+      - ".github/workflows/validate.yml"
+
+jobs:
+  validate:
+    name: Validate Configuration
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create .env from example
+        run: cp .env.example .env
+
+      - name: Validate docker-compose syntax
+        run: docker compose config --quiet
+
+      - name: Start core services
+        run: docker compose up -d postgres mysql mongodb redis
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "⏳ Waiting for services to become healthy..."
+          sleep 30
+
+          # Check each service health
+          for service in postgres mysql mongodb redis; do
+            echo "Checking $service..."
+            docker compose ps $service --format "{{.Health}}" | grep -q "healthy" || {
+              echo "❌ $service is not healthy"
+              docker compose logs $service
+              exit 1
+            }
+            echo "✅ $service is healthy"
+          done
+
+      - name: Test database connections
+        run: |
+          # Test PostgreSQL
+          docker exec dev-postgres pg_isready -U devuser -d devdb
+          echo "✅ PostgreSQL connection OK"
+
+          # Test MySQL
+          docker exec dev-mysql mysqladmin ping -h localhost -u root -prootpass123
+          echo "✅ MySQL connection OK"
+
+          # Test MongoDB
+          docker exec dev-mongodb mongosh --quiet --eval "db.adminCommand('ping')" -u admin -p mongopass123 --authenticationDatabase admin
+          echo "✅ MongoDB connection OK"
+
+          # Test Redis
+          docker exec dev-redis redis-cli -a redispass123 ping
+          echo "✅ Redis connection OK"
+
+      - name: Show running containers
+        if: always()
+        run: docker compose ps
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v

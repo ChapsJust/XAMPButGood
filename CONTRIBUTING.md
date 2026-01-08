@@ -1,159 +1,214 @@
-# 🤝 Guide de Contribution
+# Contributing to XAMPP-Docker
 
-Merci de vouloir contribuer à XAMPP-Docker! Ce guide vous aidera à démarrer.
+Thank you for your interest in contributing to XAMPP-Docker! This document provides guidelines and information for contributors.
 
-## 📋 Table des matières
+## Table of Contents
 
-- [Code de conduite](#code-de-conduite)
-- [Comment contribuer](#comment-contribuer)
-- [Structure du projet](#structure-du-projet)
-- [Standards de code](#standards-de-code)
-- [Processus de Pull Request](#processus-de-pull-request)
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [How to Contribute](#how-to-contribute)
+- [Development Workflow](#development-workflow)
+- [Style Guidelines](#style-guidelines)
+- [Pull Request Process](#pull-request-process)
 
----
+## Code of Conduct
 
-## Code de conduite
+This project follows a simple code of conduct: be respectful, be inclusive, and focus on what's best for the community. We welcome contributors of all experience levels.
 
-- Soyez respectueux et inclusif
-- Acceptez les critiques constructives
-- Concentrez-vous sur ce qui est le mieux pour la communauté
+## Getting Started
 
----
+### Prerequisites
 
-## Comment contribuer
+- Docker Desktop (Windows/Mac) or Docker Engine (Linux)
+- Git
+- A code editor with YAML support
 
-### 🐛 Signaler un bug
+### Local Setup
 
-1. Vérifiez que le bug n'a pas déjà été signalé dans les [Issues](../../issues)
-2. Créez une nouvelle issue avec:
-   - Description claire du problème
-   - Étapes pour reproduire
-   - Comportement attendu vs actuel
-   - Votre environnement (OS, version Docker)
+```bash
+# Clone your fork
+git clone https://github.com/YOUR_USERNAME/xampp-docker.git
+cd xampp-docker
 
-### 💡 Proposer une feature
+# Create environment file
+cp .env.example .env
 
-1. Ouvrez une [Discussion](../../discussions) pour en parler d'abord
-2. Si validé, créez une issue avec le label `enhancement`
+# Start services to verify everything works
+docker compose up -d
 
-### 🔧 Soumettre du code
+# Verify all services are healthy
+docker compose ps
+```
 
-1. Fork le repo
-2. Clonez votre fork
-3. Créez une branche: `git checkout -b feature/ma-feature`
-4. Faites vos modifications
-5. Testez localement
-6. Committez: `git commit -m "Add: description"`
-7. Push: `git push origin feature/ma-feature`
-8. Ouvrez une Pull Request
+## How to Contribute
 
----
+### Reporting Bugs
 
-## Structure du projet
+Before submitting a bug report, please check existing [Issues](../../issues) to avoid duplicates.
+
+When creating a bug report, include:
+
+- Clear description of the problem
+- Steps to reproduce the issue
+- Expected vs actual behavior
+- Your environment (OS, Docker version, etc.)
+- Relevant logs (`docker compose logs <service>`)
+
+### Suggesting Features
+
+1. Open a [Discussion](../../discussions) to gather feedback
+2. If the idea is well-received, create an issue with the `enhancement` label
+3. Wait for maintainer approval before starting work
+
+### Submitting Code
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature-name`
+3. Make your changes
+4. Test locally with `docker compose up -d`
+5. Commit using conventional format (see below)
+6. Push and open a Pull Request
+
+## Development Workflow
+
+### Project Structure
 
 ```
 xampp-docker/
-├── docker-compose.yml    # Définition des services
-├── .env.example          # Template de configuration
-├── .env                  # Configuration locale (gitignored)
+├── .github/
+│   └── workflows/
+│       └── validate.yml      # CI validation workflow
+├── docker-compose.yml        # Service definitions
+├── .env.example              # Configuration template
+├── .env                      # Local config (gitignored)
 ├── .gitignore
-├── README.md             # Documentation principale
-├── CONTRIBUTING.md       # Ce fichier
+├── README.md
+├── CONTRIBUTING.md
 ├── LICENSE
-└── scripts/              # Scripts utilitaires (future)
-    ├── backup.sh
-    └── restore.sh
+└── Makefile                  # Development shortcuts
 ```
 
----
+### Testing Changes
 
-## Standards de code
+Always verify your changes work correctly:
 
-### docker-compose.yml
+```bash
+# Validate docker-compose syntax
+docker compose config --quiet
+
+# Start services
+docker compose up -d
+
+# Check health status
+docker compose ps
+
+# View logs if issues occur
+docker compose logs <service-name>
+
+# Clean up
+docker compose down -v
+```
+
+## Style Guidelines
+
+### Docker Compose Services
+
+Follow this template when adding or modifying services:
 
 ```yaml
-# Bon exemple de service
 service_name:
-  image: image:version-tag      # Toujours spécifier une version
-  container_name: dev-service   # Préfixe "dev-"
-  restart: unless-stopped       # Redémarrage auto
+  image: image:version-tag # Always pin a specific version
+  container_name: dev-service # Use "dev-" prefix
+  restart: unless-stopped
   environment:
-    VAR: ${VAR}                 # Variables depuis .env
+    VAR: ${VAR} # Reference .env variables
   ports:
-    - "${PORT:-default}:internal"  # Port configurable avec default
+    - "${PORT:-default}:internal" # Configurable with fallback
   volumes:
-    - named_volume:/path        # Volumes nommés
+    - named_volume:/path # Use named volumes
   networks:
-    - dev-network               # Réseau commun
-  healthcheck:                  # Toujours un healthcheck
+    - dev-network
+  healthcheck: # Required for all database services
     test: ["CMD", "..."]
-    interval: 10s
-    timeout: 5s
-    retries: 5
-  logging:                      # Limiter les logs
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 30s
+  deploy:
+    resources:
+      limits:
+        memory: 256M # Set appropriate memory limits
+  logging:
     driver: "json-file"
     options:
       max-size: "10m"
       max-file: "3"
 ```
 
-### Conventions de nommage
+### Naming Conventions
 
-- **Containers**: `dev-{service}` (ex: `dev-postgres`)
-- **Volumes**: `dev-{service}-data` (ex: `dev-postgres-data`)
-- **Variables**: `SERVICE_VARIABLE` (ex: `POSTGRES_USER`)
+| Element    | Convention            | Example             |
+| ---------- | --------------------- | ------------------- |
+| Containers | `dev-{service}`       | `dev-postgres`      |
+| Volumes    | `dev-{service}-data`  | `dev-postgres-data` |
+| Variables  | `SERVICE_VARIABLE`    | `POSTGRES_USER`     |
+| Branches   | `feature/description` | `feature/add-nginx` |
 
-### Commits
+### Commit Messages
 
-Format: `Type: Description courte`
+Use conventional commit format:
 
-Types:
-- `Add:` Nouvelle fonctionnalité
-- `Fix:` Correction de bug
-- `Update:` Mise à jour (version, docs, etc.)
-- `Remove:` Suppression
-- `Refactor:` Refactoring sans changement fonctionnel
-
-Exemples:
 ```
-Add: phpMyAdmin service
-Fix: MySQL healthcheck failing on Windows
-Update: PostgreSQL to 18.2
+type: short description
 ```
 
+**Types:**
+
+- `feat:` New feature or service
+- `fix:` Bug fix
+- `docs:` Documentation changes
+- `refactor:` Code changes without feature/fix
+- `chore:` Maintenance tasks
+
+**Examples:**
+
+```
+feat: add Nginx reverse proxy service
+fix: resolve MySQL healthcheck timeout on Windows
+docs: update connection strings in README
+refactor: optimize PostgreSQL memory settings
+```
+
+## Pull Request Process
+
+### Before Submitting
+
+Ensure your PR meets these requirements:
+
+- [ ] Code follows the style guidelines
+- [ ] All services start successfully (`docker compose up -d`)
+- [ ] Healthchecks pass (`docker compose ps` shows "healthy")
+- [ ] New variables are added to `.env.example`
+- [ ] README is updated if adding new services
+- [ ] Commit messages follow conventional format
+
+### Review Process
+
+1. A maintainer will review your PR
+2. CI checks must pass (syntax validation, service startup)
+3. Address any requested changes
+4. Once approved, a maintainer will merge your PR
+
+### After Merging
+
+Your contribution will be included in the next release. Thank you for helping improve XAMPP-Docker!
+
+## Getting Help
+
+- Open a [Discussion](../../discussions) for questions
+- Check existing [Issues](../../issues) for known problems
+- Review the [README](README.md) for usage documentation
+
 ---
 
-## Processus de Pull Request
-
-### Checklist avant de soumettre
-
-- [ ] J'ai testé mes changements localement
-- [ ] J'ai mis à jour la documentation si nécessaire
-- [ ] J'ai ajouté les variables nécessaires dans `.env.example`
-- [ ] Mon code suit les standards du projet
-- [ ] Les healthchecks fonctionnent
-
-### Review
-
-- Au moins 1 review requise
-- Les CI checks doivent passer (si configurés)
-- Répondez aux commentaires de review
-
----
-
-## 🎯 Bonnes premières contributions
-
-Cherchez les issues avec le label `good first issue`:
-- Améliorer la documentation
-- Ajouter des exemples de connection strings
-- Traduire le README
-- Ajouter des healthchecks manquants
-
----
-
-## ❓ Questions?
-
-- Ouvrez une [Discussion](../../discussions)
-- Ou commentez sur l'issue concernée
-
-Merci de contribuer! 🙏
+Thank you for contributing! 🙏
