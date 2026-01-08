@@ -1,0 +1,57 @@
+# =============================================================================
+# GitHub Actions - Build and Release CLI
+# =============================================================================
+# Triggers when you create a new release (tag like v1.0.0)
+# Builds binaries for Windows, macOS, and Linux automatically
+# =============================================================================
+
+name: Release CLI
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - os: windows
+            goos: windows
+            goarch: amd64
+            ext: .exe
+          - os: darwin
+            goos: darwin
+            goarch: amd64
+            ext: ""
+          - os: linux
+            goos: linux
+            goarch: amd64
+            ext: ""
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21"
+
+      - name: Build binary
+        working-directory: ./cli
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          go build -ldflags="-s -w" -o devstack-${{ matrix.os }}${{ matrix.ext }} .
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: cli/devstack-${{ matrix.os }}${{ matrix.ext }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
