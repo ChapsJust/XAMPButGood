@@ -1,7 +1,7 @@
 # docker-compose.yml - Keep It Simple
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:17-alpine
     container_name: dev-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-devuser}
@@ -26,7 +26,7 @@ services:
       - mysql_data:/var/lib/mysql
 
   mongodb:
-    image: mongo:7
+    image: mongo:8.2
     container_name: dev-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-admin}
@@ -37,7 +37,7 @@ services:
       - mongodb_data:/data/db
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: dev-redis
     ports:
       - "${REDIS_PORT:-6379}:6379"
