@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - "v*" # Déclenche sur les tags comme v1.0.0, v0.1.0, etc.
+      - "v*"
 
 permissions:
   contents: write
@@ -33,14 +33,16 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22" # Ajuste selon ta version
+          go-version: "1.22"
+          cache-dependency-path: cli/go.sum # <-- Chemin vers go.sum
 
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
+        working-directory: cli # <-- Travaille dans le dossier cli/
         run: |
-          go build -o devstack-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          go build -o ../devstack-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
