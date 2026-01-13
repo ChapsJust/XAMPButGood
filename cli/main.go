@@ -85,7 +85,7 @@ func main() {
 
 func listServices() {
 	fmt.Println("Available services:")
-	for name := range templates.Services {
+	for name := range templates.ServiceDescriptions {
 		fmt.Println("  -", name)
 	}
 }
